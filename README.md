@@ -23,6 +23,7 @@ It's controlled through a very simple REST API.
 - Add support for output formats other than `.mkv`
 - Add API status endpoint
 - Use less hardcoded values
+- Docker image + Proxmox LXC template
 - Add authentication if this project will ever gets attention and there are users that need it
 
 ## REST API
