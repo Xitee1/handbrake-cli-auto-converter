@@ -2,8 +2,15 @@ import os
 import subprocess
 from pathlib import Path
 import shutil
+from flask import Flask
+import threading
+from waitress import serve
+
+app = Flask(__name__)
+stop_conversion = False
 
 def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
+    global stop_conversion
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     processed_path = Path(processed_dir)
@@ -57,6 +64,12 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
             # Remove empty folders in "input/profile" directory
             delete_empty_folders(quality_folder)
 
+            if stop_conversion:
+                print("Conversion process stopped.")
+                break
+        if stop_conversion:
+            break
+
 
 def move_to_processed_folder(source, destination, delete_empty_source_folder = False):
     # Create same folder structure in processed dir
@@ -72,14 +85,34 @@ def delete_empty_folders(root_folder):
          if not os.listdir(full_path): 
             os.rmdir(full_path)
 
+@app.route('/api/start', methods=['POST'])
+def start():
+    global stop_conversion
+    stop_conversion = False
+    return "Starting conversion process."
+
+@app.route('/api/stop', methods=['POST'])
+def stop():
+    global stop_conversion
+    stop_conversion = True
+    return "Stopping conversion process."
+
+def run_flask():
+    serve(app, host="0.0.0.0", port=5000)
 
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).parent
     print(f"Base dir: {BASE_DIR}")
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
     convert_videos(
         input_dir = BASE_DIR / "input",
         output_dir = BASE_DIR / "output",
         processed_dir = BASE_DIR / "processed",
         preset_dir = BASE_DIR / "presets",
     )
+
+
 
