@@ -1,14 +1,19 @@
 import os
 import subprocess
+from itertools import chain
 from pathlib import Path
 import shutil
-from flask import Flask
+from flask import Flask, request
+import multiprocessing
 import threading
 from waitress import serve
 
 app = Flask(__name__)
 stop_conversion = False
+conversion_thread = None
 base_dir = None
+
+video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
 def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
     input_path = Path(input_dir)
@@ -28,8 +33,10 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
         if not preset_file.exists():
             print(f"Warning: No preset file found for {quality_folder.name}, skipping.")
             continue
-        
-        input_files = list(quality_folder.rglob("*.mkv"))  # Modify for other formats if needed
+
+        input_files = list(chain.from_iterable(quality_folder.rglob(f"*.{ext}") for ext in video_extensions))
+        input_file_amount = len(input_files)
+        print(f"Found {input_file_amount} files to process for profile {quality_folder.name}.")
 
         for input_file in input_files:
             input_file_relative_path = input_file.relative_to(input_path)
