@@ -39,24 +39,23 @@ For example, you can call this API from Home Assistant to start the conversion w
 If you want to fully shut down the PC when no conversion is running, you can use Wake on LAN and configure the script to run on startup (using a cronjob or [run as systemd service](#run-as-systemd-service)).
 To shut down the PC, you can use the status endpoint to check if a conversion is currently running.
 
-## Install
-- Download the `convert.py`
-- Make sure these packages are installed on your system: `python3-flask python3-waitress`.
-- Manually create a folder structure like in the example below. Currently, it doesn't get automatically generated and the folder names `input`, `output`, `processed` and `presets`are hardcoded.
+## Installation
+- Download the `convert.py` file
+- Make sure these packages are installed on your system: `python3-flask python3-waitress`
+- Manually create a folder structure [like this](#example-folder-structure). Currently, it doesn't get automatically generated and the folder names `input`, `output`, `processed` and `presets`are hardcoded.
+- Optional: [Run as systemd service](#run-as-systemd-service)
 
 ## Usage
-1. Create a handbrake preset (using Handbrake GUI on your PC) and export it
-2. Put this preset into the `presets` folder
-3. Create a sub-folder inside the `input` folder named exactly the same as the preset filename in the `presets` folder (without file extension).
-4. Put your source files into the `input/presetname` folder
-5. Start the program with `python3 convert.py`. The API is now accessible at: `http://x.x.x.x:5000/`
+1. Start the program your preferred way (e.g. `python3 convert.py`). The API is now accessible at: `http://x.x.x.x:5000/`
+2. Create a handbrake preset (using Handbrake GUI on your PC) and export it (**Preset filename AND preset displayname must match! Currently only one preset per export file is supported!**)
+3. Place your presets into the `presets` folder
+4. Create a sub-folder inside of `input` named exactly the same as your preset
+5. Put your source files into the `input/presetName` folder
 6. To start the conversion, please refer to [REST API](#rest-api)
 
-You can add as many presets as you want. The corresponding preset will be used for processing depending on which sub-folder of `input` you put your files in.
+You can add as many presets as you want. The corresponding preset will be used for your files depending in which sub-folder inside of `input` they are.
 
-Currently, it is only supported to start the conversion through the API. You can use tools like `Postman` or `curl` for this.
-
-Example: `curl -X POST http://127.0.0.1:5000/api/start`
+Currently, it is only supported to start the conversion through the API. Example with cURL: `curl -X POST http://127.0.0.1:5000/api/start`
 
 ## Run as systemd service
 To run the program without leaving the terminal open and automatically on startup, you can create a systemd service.
