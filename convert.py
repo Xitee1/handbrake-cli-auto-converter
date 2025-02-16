@@ -38,12 +38,12 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
         input_file_amount = len(input_files)
         print(f"Found {input_file_amount} files to process for profile {quality_folder.name}.")
 
-        for input_file in input_files:
+        for index, input_file in enumerate(input_files, start=1):
             input_file_relative_path = input_file.relative_to(input_path)
-            output_file = output_path / Path(*input_file_relative_path.parent.parts[1:]) / f"{input_file.stem}-dasdasd.mkv"
+            output_file = output_path / Path(*input_file_relative_path.parent.parts[1:]) / f".tmp_{input_file.stem}.mkv"
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
-            print(f"Converting: {input_file_relative_path} -> {output_file}")
+            print(f"Converting [{index}/{input_file_amount}]: {input_file} -> {output_file}")
             
             command = [
                 "HandBrakeCLI",
