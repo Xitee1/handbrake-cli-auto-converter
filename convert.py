@@ -7,16 +7,19 @@ from flask import Flask, request
 import multiprocessing
 import threading
 from waitress import serve
+import argparse
 
 app = Flask(__name__)
 stop_conversion = False
 conversion_thread = None
-base_dir = None
 conversion_running = False
+
+output_extension = None
+base_dir = None
 
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
-def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
+def convert_videos(input_dir, output_dir, processed_dir, preset_dir, output_file_extension):
     global conversion_running
 
     conversion_running = True
@@ -44,7 +47,7 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
 
         for index, input_file in enumerate(input_files, start=1):
             input_file_relative_path = input_file.relative_to(input_path)
-            output_file = output_path / Path(*input_file_relative_path.parent.parts[1:]) / f".tmp_{input_file.stem}.mkv"
+            output_file = output_path / Path(*input_file_relative_path.parent.parts[1:]) / f".tmp_{input_file.stem}.{output_file_extension}"
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
             print(f"Converting [{index}/{input_file_amount}]: {input_file} -> {output_file}")
@@ -105,7 +108,7 @@ def delete_empty_folders(root_folder):
 
 @app.route('/api/start', methods=['POST'])
 def start():
-    global base_dir, stop_conversion, conversion_thread
+    global stop_conversion, conversion_thread
 
     if conversion_running:
         return "Conversion process is already running."
@@ -119,6 +122,7 @@ def start():
             output_dir=base_dir / "output",
             processed_dir=base_dir / "processed",
             preset_dir=base_dir / "presets",
+            output_file_extension=output_extension,
         )
         print("Conversion process ended.")
 
@@ -149,15 +153,26 @@ def stop():
     else:
         return "No conversion process to stop."
 
-def run_flask():
-    serve(app, host="0.0.0.0", port=5000)
+def run_flask(host, port):
+    serve(app, host=host, port=port)
 
 if __name__ == "__main__":
-    base_dir = Path(__file__).parent
+    parser = argparse.ArgumentParser(prog="Handbrake Helper")
+
+    parser.add_argument('--force-start', default=False, help="Start the conversion process immediately without waiting for API request.")
+    parser.add_argument('--base-dir', default=Path(__file__).parent, help="Base directory for input, output, processed and preset folders.")
+    parser.add_argument('--output-extension', default="mkv", help="Output file extension (e.g. mkv, mp4")
+    parser.add_argument('--port', default=5000)
+    parser.add_argument('--host', default="0.0.0.0")
+    args = parser.parse_args()
+
+    base_dir = Path(args.base_dir)
+    output_extension = args.output_extension
+
     print(f"Base dir: {base_dir}")
 
-    flask_thread = threading.Thread(target=run_flask)
+    flask_thread = threading.Thread(target=run_flask, args=(args.host, int(args.port)))
     flask_thread.start()
 
-    print("Converter is ready. Call POST http://127.0.0.1:5000/api/start to start the conversion process.")
+    print(f"Handbrake Helper is ready. Call POST http://127.0.0.1:{args.port}/api/start to start the conversion process.")
 
