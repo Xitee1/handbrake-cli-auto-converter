@@ -1,11 +1,14 @@
 # HandBrake-CLI auto converter
 
-A simple python script that converts all video files in a directory to a specified format using HandBrake-CLI.
+This simple program converts all video files from an `input` folder and outputs the converted file in an `output` folder using HandBrakeCLI.
+After successful conversion, the original source file placed into a separated `processed` folder to prevent it from getting converted again in the next run.
 
-## Explanation
-This simple program can convert all video files from an `input` folder and outputs the converted file in an `output` folder.
-While converting, the output file is prefixed with `.tmp_` to make it easy to differentiate between interrupted attempts.
-After successful conversion, the file will be renamed back to its original name and the source file from the input file is moved into a separated `processed` folder.
+It's very similar to `docker-handbrake` or other tools like `unmanic` but without GUI and is made to be as simple as possible.
+You can create presets in the Handbrake GUI on Desktop and add these presets to the `presets` folder.
+Based on which subfolder inside of `input` you place your files, a different preset is being used.
+It's controlled through a very simple REST API.
+
+**It should fit your needs perfectly if you are used to adding hundreds of files to your handbrake queue and want to automate that.** 
 
 ## Features
 - **REST-API**
