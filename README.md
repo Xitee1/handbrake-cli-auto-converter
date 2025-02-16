@@ -31,12 +31,13 @@ It's controlled through a very simple REST API.
 | `/api/start`           | Starts processing all files in the input folder                                                              |
 | `/api/stop`            | Finishes the current file and then stops                                                                     |
 | `/api/stop?force=true` | Force-stops the processing. An unfinished file with the prefix `.tmp_` will be left in the output directory. |
+| `/api/status`          | WIP!                                                                                                         |
 
 ### Why REST API?
 It allows you to very simply automate start/stopping.
 For example, you can call this API from Home Assistant to start the conversion whenever there's excess solar power.
-If you want to fully shut down the PC when no conversion is running, you can use Wake on LAN and configure the script to run on startup (e.g. with @reboot cronjob).
-An API endpoint for the current state (if a task is running) will be added soon to also be able to automate the shutdown of the PC.
+If you want to fully shut down the PC when no conversion is running, you can use Wake on LAN and configure the script to run on startup (using a cronjob or [run as systemd service](#run-as-systemd-service)).
+To shut down the PC, you can use the status endpoint to check if a conversion is currently running.
 
 ## Install
 - Download the `convert.py`
