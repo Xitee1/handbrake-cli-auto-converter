@@ -41,7 +41,7 @@ To shut down the PC, you can use the status endpoint to check if a conversion is
 
 ## Installation
 - Download the `convert.py` file
-- Make sure these packages are installed on your system: `python3-flask python3-waitress`
+- Make sure these packages are installed on your system: `handbrake-cli python3-flask python3-waitress`
 - Manually create a folder structure [like this](#example-folder-structure). Currently, it doesn't get automatically generated and the folder names `input`, `output`, `processed` and `presets`are hardcoded.
 - Optional: [Run as systemd service](#run-as-systemd-service)
 
