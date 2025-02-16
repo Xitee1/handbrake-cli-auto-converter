@@ -99,7 +99,7 @@ Before conversion:
     ├── output
     ├── processed
     ├── presets/
-    │   └── preset.json
+    │   └── preset1.json
     └── convert.py
 ```
 
@@ -119,7 +119,7 @@ Mid-conversion:
     │   └── something.S01/
     │       └── something.S01E01.mp4
     ├── presets/
-    │   └── preset.json
+    │   └── preset1.json
     └── convert.py
 ```
 
@@ -138,6 +138,6 @@ After conversion:
     │       ├── something.S01E01.mp4
     │       └── something.S01E02.mp4
     ├── presets/
-    │   └── preset.json
+    │   └── preset1.json
     └── convert.py
 ```
