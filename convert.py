@@ -8,9 +8,9 @@ from waitress import serve
 
 app = Flask(__name__)
 stop_conversion = False
+base_dir = None
 
 def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
-    global stop_conversion
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     processed_path = Path(processed_dir)
@@ -79,16 +79,30 @@ def move_to_processed_folder(source, destination, delete_empty_source_folder = F
 
 
 def delete_empty_folders(root_folder):
-   for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
-      for dirname in dirnames:
-         full_path = os.path.join(dirpath, dirname)
-         if not os.listdir(full_path): 
-            os.rmdir(full_path)
+    for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
+        for dirname in dirnames:
+            full_path = os.path.join(dirpath, dirname)
+            if not os.listdir(full_path):
+                os.rmdir(full_path)
 
 @app.route('/api/start', methods=['POST'])
 def start():
     global stop_conversion
     stop_conversion = False
+
+    def run_conversion():
+        print("Starting conversion process.")
+        convert_videos(
+            input_dir=base_dir / "input",
+            output_dir=base_dir / "output",
+            processed_dir=base_dir / "processed",
+            preset_dir=base_dir / "presets",
+        )
+        print("Conversion process ended.")
+
+    conversion_thread = threading.Thread(target=run_conversion)
+    conversion_thread.start()
+
     return "Starting conversion process."
 
 @app.route('/api/stop', methods=['POST'])
@@ -101,18 +115,11 @@ def run_flask():
     serve(app, host="0.0.0.0", port=5000)
 
 if __name__ == "__main__":
-    BASE_DIR = Path(__file__).parent
-    print(f"Base dir: {BASE_DIR}")
+    base_dir = Path(__file__).parent
+    print(f"Base dir: {base_dir}")
 
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
 
-    convert_videos(
-        input_dir = BASE_DIR / "input",
-        output_dir = BASE_DIR / "output",
-        processed_dir = BASE_DIR / "processed",
-        preset_dir = BASE_DIR / "presets",
-    )
-
-
+    print("Converter is ready. Call POST http://localhost:5000/api/start to start the conversion process.")
 
