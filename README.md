@@ -14,9 +14,15 @@ It's controlled through a very simple REST API.
 - **REST-API**
   - After starting the script, it will idle until a start request is sent.
   - It's possible to request a stop, which will finish the current file and then stop. Using another start request resumes the conversion. **NOTE:** It's not possible to pause mid-file!
-- **Supports multiple Handbrake Presets**: Use all the power of Handbrake
-- **Temporary filenames**: Normally it's hard to tell if a handbrake task was finished successfully because the output file looks normal at the first look. Using temporary filenames, you can easily tell if the conversion was successfully finished.
-- Output currently only supports `.mkv`
+- **Supports multiple Handbrake Presets**:
+  - Use all the power of Handbrake
+- **Temporary filenames**:
+  - Normally it's hard to tell if a handbrake task was finished successfully because the output file looks normal at the first look. Using temporary filenames, you can easily tell if the conversion was successfully finished.
+
+## TODO
+- Add support for output formats other than `.mkv`
+- Add API status endpoint
+- Use less hardcoded values
 
 ## REST API
 
