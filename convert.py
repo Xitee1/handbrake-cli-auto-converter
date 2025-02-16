@@ -62,11 +62,16 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
                 print(f"Error converting {input_file_relative_path}: {result.stderr.decode()}")
             else:
                 print(f"Successfully converted {input_file_relative_path}")
-                move_to_processed_folder(
+
+                # Move source file to "processed" directory
+                move_file(
                     source=input_file,
                     destination=processed_path / Path(*input_file_relative_path.parts[1:]),
-                    delete_empty_source_folder = True,
+                    make_missing_dirs = True,
                 )
+
+                # Rename output file to remove ".tmp_" prefix
+                output_file.rename(output_file.with_name(output_file.name.replace(".tmp_", "")))
 
             # Remove empty folders in "input/profile" directory
             delete_empty_folders(quality_folder)
@@ -75,12 +80,13 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
                 print("Conversion process stopped.")
                 break
         if stop_conversion:
+            print("Conversion process stopped.")
             break
 
 
-def move_to_processed_folder(source, destination, delete_empty_source_folder = False):
-    # Create same folder structure in processed dir
-    destination.parent.mkdir(parents=True, exist_ok=True)
+def move_file(source, destination, make_missing_dirs = False):
+    if make_missing_dirs:
+        destination.parent.mkdir(parents=True, exist_ok=True)
 
     shutil.move(str(source), str(destination))
 
