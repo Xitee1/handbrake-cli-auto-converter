@@ -51,6 +51,33 @@ Currently, it is only supported to start the conversion through the API. You can
 
 Example: `curl -X POST http://127.0.0.1:5000/api/start`
 
+## Run as systemd service
+To run the program without leaving the terminal open and automatically on startup, you can create a systemd service.
+
+1. `nano /etc/systemd/system/handbrake-helper.service`
+2. Insert this and adjust `WorkingDirectory` and `ExecStart` to match your paths:
+```ini
+[Unit]
+Description=Handbrake helper
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /mnt/convert/convert.py
+WorkingDirectory=/mnt/convert
+StandardOutput=append:/var/log/handbrake-helper.log
+StandardError=append:/var/log/handbrake-helper.err.log
+Restart=always
+User=user
+Group=user
+
+[Install]
+WantedBy=multi-user.target
+```
+3. `systemctl daemon-reload`
+4. `systemctl enable handbrake-helper.service`
+5. `systemctl start handbrake-helper.service`
+6. `systemctl status handbrake-helper.service`
+
 ## Example folder structure
 Before conversion:
 ```
