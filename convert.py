@@ -12,10 +12,14 @@ app = Flask(__name__)
 stop_conversion = False
 conversion_thread = None
 base_dir = None
+conversion_running = False
 
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
 def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
+    global conversion_running
+
+    conversion_running = True
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     processed_path = Path(processed_dir)
@@ -83,6 +87,7 @@ def convert_videos(input_dir, output_dir, processed_dir, preset_dir):
             print("Conversion process stopped.")
             break
 
+    conversion_running = False
 
 def move_file(source, destination, make_missing_dirs = False):
     if make_missing_dirs:
@@ -101,6 +106,10 @@ def delete_empty_folders(root_folder):
 @app.route('/api/start', methods=['POST'])
 def start():
     global base_dir, stop_conversion, conversion_thread
+
+    if conversion_running:
+        return "Conversion process is already running."
+
     stop_conversion = False
 
     def run_conversion():
@@ -121,22 +130,24 @@ def start():
 @app.route('/api/stop', methods=['POST'])
 def stop():
     global stop_conversion, conversion_thread
-    stop_conversion = True
 
-    force = request.args.get('force', 'false').lower() == 'true'
-    if force:
-        if conversion_thread is not None:
-            conversion_thread.terminate()
-            conversion_thread = None
-            print("Conversion force-stopped.")
-            return "Conversion force-stopped."
+    if conversion_running:
+        stop_conversion = True
+        force = request.args.get('force', 'false').lower() == 'true'
+        if force:
+            if conversion_thread is not None:
+                conversion_thread.terminate()
+                conversion_thread = None
+                print("Conversion force-stopped.")
+                return "Conversion force-stopped."
+            else:
+                return "No conversion process to stop."
+
         else:
-            print("No conversion process to stop.")
-            return "No conversion process to stop."
-
+            print("Stopping conversion process after finishing current task.")
+            return "Stopping conversion process after finishing current task."
     else:
-        print("Stopping conversion process after finishing current task.")
-        return "Stopping conversion process after finishing current task."
+        return "No conversion process to stop."
 
 def run_flask():
     serve(app, host="0.0.0.0", port=5000)
@@ -148,5 +159,5 @@ if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
 
-    print("Converter is ready. Call POST http://localhost:5000/api/start to start the conversion process.")
+    print("Converter is ready. Call POST http://127.0.0.1:5000/api/start to start the conversion process.")
 
