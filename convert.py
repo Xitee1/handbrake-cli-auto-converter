@@ -87,7 +87,7 @@ def delete_empty_folders(root_folder):
 
 @app.route('/api/start', methods=['POST'])
 def start():
-    global stop_conversion
+    global base_dir, stop_conversion, conversion_thread
     stop_conversion = False
 
     def run_conversion():
@@ -100,16 +100,30 @@ def start():
         )
         print("Conversion process ended.")
 
-    conversion_thread = threading.Thread(target=run_conversion)
+    conversion_thread = multiprocessing.Process(target=run_conversion)
     conversion_thread.start()
 
     return "Starting conversion process."
 
 @app.route('/api/stop', methods=['POST'])
 def stop():
-    global stop_conversion
+    global stop_conversion, conversion_thread
     stop_conversion = True
-    return "Stopping conversion process."
+
+    force = request.args.get('force', 'false').lower() == 'true'
+    if force:
+        if conversion_thread is not None:
+            conversion_thread.terminate()
+            conversion_thread = None
+            print("Conversion force-stopped.")
+            return "Conversion force-stopped."
+        else:
+            print("No conversion process to stop.")
+            return "No conversion process to stop."
+
+    else:
+        print("Stopping conversion process after finishing current task.")
+        return "Stopping conversion process after finishing current task."
 
 def run_flask():
     serve(app, host="0.0.0.0", port=5000)
