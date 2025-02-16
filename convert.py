@@ -3,7 +3,7 @@ import subprocess
 from itertools import chain
 from pathlib import Path
 import shutil
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import multiprocessing
 import threading
 from waitress import serve
@@ -16,80 +16,99 @@ conversion_running = False
 
 output_extension = None
 base_dir = None
+current_file = None
+source_files_total = None
+source_files_processed = None
+source_files_successful = None
+source_files_failed = None
 
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
 def convert_videos(input_dir, output_dir, processed_dir, preset_dir, output_file_extension):
-    global conversion_running
+    global conversion_running, current_file, source_files_total, source_files_processed, source_files_successful, source_files_failed
 
     conversion_running = True
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     processed_path = Path(processed_dir)
     preset_path = Path(preset_dir)
-    
+
     if not input_path.exists() or not preset_path.exists():
         print("Error: Input or preset directory does not exist.")
         return
-    
-    for quality_folder in input_path.iterdir():
-        if not quality_folder.is_dir():
+
+    source_files = list(chain.from_iterable(input_path.rglob(f"*.{ext}") for ext in video_extensions))
+    source_files_total = len(source_files)
+    source_files_processed = 0
+    source_files_successful = 0
+    source_files_failed = 0
+
+    print(f"Found {source_files_total} total files to process.")
+
+    for source_file in source_files:
+        source_files_processed += 1
+        current_file = source_file
+
+        # Get preset folder & check if it is an directory
+        source_preset_folder: Path = input_path / source_file.relative_to(input_path).parts[0]
+        source_preset_name = source_preset_folder.name
+        if not source_preset_folder.is_dir():
+            print(f"Warning: Preset folder '{source_preset_folder}' is not a folder!")
             continue
-        
-        preset_file = preset_path / f"{quality_folder.name}.json"
+
+        # Build the paths for the output file
+        source_file_relative_folder_path = Path(*source_file.relative_to(input_path).parent.parts[1:])
+        output_file = output_path / source_file_relative_folder_path / f".tmp_{source_file.stem}.{output_file_extension}"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Print status message
+        print(f"Processing [{source_files_processed}/{source_files_total}]: {source_file} -> {output_file}")
+
+        # Find the preset file and check if it exists
+        preset_file = preset_path / f"{source_preset_name}.json"
         if not preset_file.exists():
-            print(f"Warning: No preset file found for {quality_folder.name}, skipping.")
+            print(f"Warning: No preset file found for {source_preset_name}, skipping.")
             continue
 
-        input_files = list(chain.from_iterable(quality_folder.rglob(f"*.{ext}") for ext in video_extensions))
-        input_file_amount = len(input_files)
-        print(f"Found {input_file_amount} files to process for profile {quality_folder.name}.")
+        # HandbrakeCLI command
+        command = [
+            "HandBrakeCLI",
+            "--input", str(source_file),
+            "--output", str(output_file),
+            "--preset-import-file", str(preset_file),
+            "--preset", source_preset_name
+        ]
 
-        for index, input_file in enumerate(input_files, start=1):
-            input_file_relative_path = input_file.relative_to(input_path)
-            output_file = output_path / Path(*input_file_relative_path.parent.parts[1:]) / f".tmp_{input_file.stem}.{output_file_extension}"
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            print(f"Converting [{index}/{input_file_amount}]: {input_file} -> {output_file}")
-            
-            command = [
-                "HandBrakeCLI",
-                "--input", str(input_file),
-                "--output", str(output_file),
-                "--preset-import-file", str(preset_file),
-                "--preset", quality_folder.name
-            ]
-            
-            #with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
-            #    for line in process.stdout:
-            #        print(line.decode('utf8'))
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            source_files_failed += 1
+            print(f"Error processing file {source_file}: {result.stderr.decode()}")
+        else:
+            # Move source file to "processed" directory
+            move_file(
+                source=source_file,
+                destination=processed_path / source_file_relative_folder_path / source_file.name,
+                make_missing_dirs = True,
+            )
 
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if result.returncode != 0:
-                print(f"Error converting {input_file_relative_path}: {result.stderr.decode()}")
-            else:
-                print(f"Successfully converted {input_file_relative_path}")
+            # Rename output file to remove ".tmp_" prefix
+            output_file.rename(output_file.with_name(output_file.name.replace(".tmp_", "")))
 
-                # Move source file to "processed" directory
-                move_file(
-                    source=input_file,
-                    destination=processed_path / Path(*input_file_relative_path.parts[1:]),
-                    make_missing_dirs = True,
-                )
+            source_files_successful += 1
+            print(f"Successfully converted {source_file}")
 
-                # Rename output file to remove ".tmp_" prefix
-                output_file.rename(output_file.with_name(output_file.name.replace(".tmp_", "")))
+        # Remove empty folders in "input/{profileName}" directory
+        delete_empty_folders(source_preset_folder)
 
-            # Remove empty folders in "input/profile" directory
-            delete_empty_folders(quality_folder)
-
-            if stop_conversion:
-                print("Conversion process stopped.")
-                break
         if stop_conversion:
-            print("Conversion process stopped.")
+            print("Conversion process stopped. Conversions left: ", source_files_total - source_files_successful)
             break
 
+    current_file = None
+    source_files_total = None
+    source_files_processed = None
+    source_files_successful = None
+    source_files_failed = None
     conversion_running = False
 
 def move_file(source, destination, make_missing_dirs = False):
@@ -152,6 +171,18 @@ def stop():
             return "Stopping conversion process after finishing current task."
     else:
         return "No conversion process to stop."
+
+@app.route('/api/status', methods=['GET'])
+def status():
+    return jsonify({
+        "status": "running" if conversion_running else "idle",
+        "scheduled_stop": stop_conversion,
+        "current_file": current_file,
+        "source_files_total": source_files_total,
+        "source_files_processed": source_files_processed,
+        "source_files_successful": source_files_successful,
+        "source_files_failed": source_files_failed,
+    })
 
 def run_flask(host, port):
     serve(app, host=host, port=port)

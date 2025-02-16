@@ -33,7 +33,7 @@ It's controlled through a very simple REST API.
 | `/api/start`           | Starts processing all files in the input folder                                                               |
 | `/api/stop`            | Finishes the current file and then stops                                                                      |
 | `/api/stop?force=true` | Interrupts the process immediately. The unfinished file can't be resumed but will be restarted the next time. |
-| `/api/status`          | WIP!                                                                                                          |
+| `/api/status`          | Example output: `{"current_file":null,"scheduled_stop":false,"source_files_failed":null,"source_files_processed":null,"source_files_successful":null,"source_files_total":null,"status":"idle"}`                                                                                              |
 
 ### Why REST API?
 It allows you to very simply automate start/stopping.
