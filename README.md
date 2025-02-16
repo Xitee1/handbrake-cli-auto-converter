@@ -23,18 +23,14 @@ It's controlled through a very simple REST API.
 - Add support for output formats other than `.mkv`
 - Add API status endpoint
 - Use less hardcoded values
+- Add authentication if this project will ever gets attention and there are users that need it
 
 ## REST API
-
 | Endpoint               | Description                                                                                                  |
 |------------------------|--------------------------------------------------------------------------------------------------------------|
 | `/api/start`           | Starts processing all files in the input folder                                                              |
 | `/api/stop`            | Finishes the current file and then stops                                                                     |
 | `/api/stop?force=true` | Force-stops the processing. An unfinished file with the prefix `.tmp_` will be left in the output directory. |
-
-### TODO
-- Add status endpoint
-- Add authentication if this project will ever gets attention and there are users that need it
 
 ### Why REST API?
 It allows you to very simply automate start/stopping.
