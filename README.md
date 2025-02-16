@@ -57,7 +57,8 @@ To shut down the PC, you can use the status endpoint to check if a conversion is
 
 You can add as many presets as you want. The corresponding preset will be used for your files depending on which sub-folder inside of `input` they are.
 
-By default, the program will idle after startup and wait
+By default, the program will idle after startup and wait for a start request.
+However, there are some options that you can use. Check them out with `python3 convert.py --help`
 
 ## Run as systemd service
 To run the program without leaving the terminal open and automatically on startup, you can create a systemd service.
