@@ -12,27 +12,28 @@ It's controlled through a very simple REST API.
 
 ## Features
 - **REST-API**
-  - After starting the script, it will idle until a start request is sent.
-  - It's possible to request a stop, which will finish the current file and then stop. Using another start request resumes the conversion. **NOTE:** It's not possible to pause mid-file!
+  - Fully controllable through the API for better automation
 - **Supports multiple Handbrake Presets**:
   - Use all the power of Handbrake
 - **Temporary filenames**:
   - Normally it's hard to tell if a handbrake task was finished successfully because the output file looks normal at the first look. Using temporary filenames, you can easily tell if the conversion was successfully finished.
+- **Stop/Resume batch**:
+  - When stopping the process using the API, it will finish the current file and then stop. On the next start it will resume the rest of the files. **NOTE:** It's not possible to pause mid-file!
+  - If interrupted, it leaves behind an unfinished file with the prefix `.tmp_` in the output folder. This file can't be resumed but will be restarted the next time.
 
 ## TODO
-- Add support for output formats other than `.mkv`
 - Add API status endpoint
 - Use less hardcoded values
 - Docker image + Proxmox LXC template
 - Add authentication if this project will ever gets attention and there are users that need it
 
 ## REST API
-| Endpoint               | Description                                                                                                  |
-|------------------------|--------------------------------------------------------------------------------------------------------------|
-| `/api/start`           | Starts processing all files in the input folder                                                              |
-| `/api/stop`            | Finishes the current file and then stops                                                                     |
-| `/api/stop?force=true` | Force-stops the processing. An unfinished file with the prefix `.tmp_` will be left in the output directory. |
-| `/api/status`          | WIP!                                                                                                         |
+| Endpoint               | Description                                                                                                   |
+|------------------------|---------------------------------------------------------------------------------------------------------------|
+| `/api/start`           | Starts processing all files in the input folder                                                               |
+| `/api/stop`            | Finishes the current file and then stops                                                                      |
+| `/api/stop?force=true` | Interrupts the process immediately. The unfinished file can't be resumed but will be restarted the next time. |
+| `/api/status`          | WIP!                                                                                                          |
 
 ### Why REST API?
 It allows you to very simply automate start/stopping.
@@ -54,9 +55,9 @@ To shut down the PC, you can use the status endpoint to check if a conversion is
 5. Put your source files into the `input/presetName` folder
 6. To start the conversion, please refer to [REST API](#rest-api)
 
-You can add as many presets as you want. The corresponding preset will be used for your files depending in which sub-folder inside of `input` they are.
+You can add as many presets as you want. The corresponding preset will be used for your files depending on which sub-folder inside of `input` they are.
 
-Currently, it is only supported to start the conversion through the API. Example with cURL: `curl -X POST http://127.0.0.1:5000/api/start`
+By default, the program will idle after startup and wait
 
 ## Run as systemd service
 To run the program without leaving the terminal open and automatically on startup, you can create a systemd service.
