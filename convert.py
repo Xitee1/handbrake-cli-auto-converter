@@ -35,7 +35,7 @@ class ConversionManager:
         self.source_files_failed = 0
 
 
-    def convert_videos(self):
+    def convert_all_videos(self):
         self.conversion_running = True
 
         if not self.input_folder_path.exists() or not self.preset_folder_path.exists():
@@ -136,9 +136,7 @@ def start():
 
     def run_conversion():
         print("Starting conversion process.")
-        conversion_manager.convert_videos(
-
-        )
+        conversion_manager.convert_all_videos()
         print("Conversion process ended.")
 
     conversion_manager.conversion_thread = multiprocessing.Process(target=run_conversion)
