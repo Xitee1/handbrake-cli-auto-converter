@@ -16,7 +16,14 @@ conversion_manager = None
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
 class ConversionManager:
-    def __init__(self, input_dir, output_dir, processed_dir, preset_dir, output_extension):
+    def __init__(
+            self,
+            input_dir: str|Path,
+            output_dir: str|Path,
+            processed_dir: str|Path,
+            preset_dir: str|Path,
+            output_extension: str|Path,
+    ):
         self.input_folder_path = Path(input_dir)
         self.output_folder_path = Path(output_dir)
         self.processed_folder_path = Path(processed_dir)
