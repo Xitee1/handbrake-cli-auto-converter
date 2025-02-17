@@ -41,6 +41,8 @@ class ConversionManager:
         self.source_files_successful = 0
         self.source_files_failed = 0
 
+    def find_input_videos(self) -> list[Path]:
+        return list(chain.from_iterable(self.input_folder_path.rglob(f"*.{ext}") for ext in video_extensions))
 
     def convert_all_videos(self):
         self.conversion_running = True
@@ -49,7 +51,7 @@ class ConversionManager:
             print("Error: Input or preset directory does not exist.")
             return
 
-        source_files = list(chain.from_iterable(self.input_folder_path.rglob(f"*.{ext}") for ext in video_extensions))
+        source_files = self.find_input_videos()
         self.source_files_total = len(source_files)
 
         print(f"Found {self.source_files_total} total files to process.")
