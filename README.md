@@ -42,7 +42,7 @@ If you want to fully shut down the PC when no conversion is running, you can use
 To shut down the PC, you can use the status endpoint to check if a conversion is currently running.
 
 ## Installation
-- Download the `convert.py` file
+- Download the `convert.py` file from [Releases](https://github.com/Xitee1/handbrake-cli-auto-converter/releases)
 - Make sure these packages are installed on your system: `handbrake-cli python3-flask python3-waitress`
 - Manually create a folder structure [like this](#example-folder-structure). Currently, it doesn't get automatically generated and the folder names `input`, `output`, `processed` and `presets`are hardcoded.
 - Optional: [Run as systemd service](#run-as-systemd-service)
