@@ -15,6 +15,21 @@ conversion_manager = None
 
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
+
+def delete_empty_folders(root_folder):
+    for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
+        for dirname in dirnames:
+            full_path = os.path.join(dirpath, dirname)
+            if not os.listdir(full_path):
+                os.rmdir(full_path)
+
+
+def move_file(source, destination, make_missing_dirs=False):
+    if make_missing_dirs:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source), str(destination))
+
+
 class ConversionManager:
     def __init__(
             self,
@@ -56,61 +71,35 @@ class ConversionManager:
 
         print(f"Found {self.source_files_total} total files to process.")
 
-        for source_file in source_files:
-            self.source_files_processed += 1
-            self.current_file = source_file
-
+        for source_path in source_files:
             # Get preset folder & check if it is an directory
-            source_preset_folder: Path = self.input_folder_path / source_file.relative_to(self.input_folder_path).parts[0]
+            source_preset_folder: Path = self.input_folder_path / source_path.relative_to(self.input_folder_path).parts[0]
             source_preset_name = source_preset_folder.name
             if not source_preset_folder.is_dir():
-                print(f"Warning: Preset folder '{source_preset_folder}' is not a folder!")
-                continue
+                print(f"Error: Preset folder '{source_preset_folder}' is not a folder!")
+                return
 
             # Build the paths for the output file
-            source_file_relative_folder_path = Path(*source_file.relative_to(self.input_folder_path).parent.parts[1:])
-            output_file = self.output_folder_path / source_preset_name / source_file_relative_folder_path / f".tmp_{source_file.stem}.{self.output_file_extension}"
+            source_file_relative_folder_path = Path(*source_path.relative_to(self.input_folder_path).parent.parts[1:])
+            output_file = self.output_folder_path / source_preset_name / source_file_relative_folder_path / f".tmp_{source_path.stem}.{self.output_file_extension}"
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            # Print status message
-            print(f"Processing [{self.source_files_processed}/{self.source_files_total}]: {source_file} -> {output_file}")
+            # Find the preset file
+            preset_path = self.preset_folder_path / f"{source_preset_name}.json"
 
-            # Find the preset file and check if it exists
-            preset_file = self.preset_folder_path / f"{source_preset_name}.json"
-            if not preset_file.exists():
-                print(f"Warning: No preset file found for {source_preset_name}, skipping.")
-                continue
-
-            # HandbrakeCLI command
-            command = [
-                "HandBrakeCLI",
-                "--input", str(source_file),
-                "--output", str(output_file),
-                "--preset-import-file", str(preset_file),
-                "--preset", source_preset_name
-            ]
-
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if result.returncode != 0:
-                self.source_files_failed += 1
-                print(f"Error processing file {source_file}: {result.stderr.decode()}")
-            else:
-                # Move source file to "processed" directory
-                self.move_file(
-                    source=source_file,
-                    destination=self.processed_folder_path / source_preset_name / source_file_relative_folder_path / source_file.name,
-                    make_missing_dirs=True,
-                )
-
-                # Rename output file to remove ".tmp_" prefix
-                output_file.rename(output_file.with_name(output_file.name.replace(".tmp_", "")))
-
-                self.source_files_successful += 1
-                print(f"Successfully converted {source_file}")
+            # Convert the video
+            self.convert_video(
+                source_path=source_path,
+                destination_path=output_file,
+                processed_path=self.processed_folder_path / source_preset_name / source_file_relative_folder_path / source_path.name,
+                preset_path=preset_path,
+                source_preset_name=source_preset_name
+            )
 
             # Remove empty folders in "input/{profileName}" directory
-            self.delete_empty_folders(source_preset_folder)
+            delete_empty_folders(source_preset_folder)
 
+            # Stop conversion if requested
             if self.stop_conversion:
                 print("Conversion process stopped. Conversions left: ", self.source_files_total - self.source_files_successful)
                 break
@@ -123,17 +112,51 @@ class ConversionManager:
         self.source_files_failed = 0
         self.conversion_running = False
 
-    def move_file(self, source, destination, make_missing_dirs=False):
-        if make_missing_dirs:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(destination))
+    def convert_video(
+            self,
+            source_path: Path,
+            destination_path: Path,
+            processed_path: Path,
+            preset_path: Path,
+            source_preset_name: str,
+    ):
+        self.source_files_processed += 1
+        self.current_file = source_path
 
-    def delete_empty_folders(self, root_folder):
-        for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
-            for dirname in dirnames:
-                full_path = os.path.join(dirpath, dirname)
-                if not os.listdir(full_path):
-                    os.rmdir(full_path)
+        # Print status message
+        print(f"Processing [{self.source_files_processed}/{self.source_files_total}]: {source_path} -> {destination_path}")
+
+        # Check if preset file exists
+        if not preset_path.exists():
+            print(f"Warning: No preset file found for {source_preset_name}, skipping.")
+            return
+
+        # HandbrakeCLI command
+        command = [
+            "HandBrakeCLI",
+            "--input", str(source_path),
+            "--output", str(destination_path),
+            "--preset-import-file", str(preset_path),
+            "--preset", source_preset_name
+        ]
+
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            self.source_files_failed += 1
+            print(f"Error processing file {source_path}: {result.stderr.decode()}")
+        else:
+            # Move source file to "processed" directory
+            move_file(
+                source=source_path,
+                destination=processed_path,
+                make_missing_dirs=True,
+            )
+
+            # Rename output file to remove ".tmp_" prefix
+            destination_path.rename(destination_path.with_name(destination_path.name.replace(".tmp_", "")))
+
+            self.source_files_successful += 1
+            print(f"Successfully converted {source_path}")
 
 
 @app.route('/api/start', methods=['POST'])
