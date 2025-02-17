@@ -60,7 +60,7 @@ class ConversionManager:
 
             # Build the paths for the output file
             source_file_relative_folder_path = Path(*source_file.relative_to(self.input_folder_path).parent.parts[1:])
-            output_file = self.output_folder_path / source_file_relative_folder_path / f".tmp_{source_file.stem}.{self.output_file_extension}"
+            output_file = self.output_folder_path / source_preset_name / source_file_relative_folder_path / f".tmp_{source_file.stem}.{self.output_file_extension}"
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Print status message
@@ -89,7 +89,7 @@ class ConversionManager:
                 # Move source file to "processed" directory
                 self.move_file(
                     source=source_file,
-                    destination=self.processed_folder_path / source_file_relative_folder_path / source_file.name,
+                    destination=self.processed_folder_path / source_preset_name / source_file_relative_folder_path / source_file.name,
                     make_missing_dirs=True,
                 )
 
