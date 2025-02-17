@@ -11,11 +11,11 @@ import argparse
 
 app = Flask(__name__)
 
-conversion_manager = None
-
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
 
-
+##################
+### CONVERSION ###
+##################
 def delete_empty_folders(root_folder):
     for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
         for dirname in dirnames:
@@ -30,24 +30,15 @@ def move_file(source, destination, make_missing_dirs=False):
     shutil.move(str(source), str(destination))
 
 
-class ConversionManager:
-    def __init__(
-            self,
-            input_dir: str|Path,
-            output_dir: str|Path,
-            processed_dir: str|Path,
-            preset_dir: str|Path,
-            output_extension: str|Path,
-    ):
-        self.input_folder_path = Path(input_dir)
-        self.output_folder_path = Path(output_dir)
-        self.processed_folder_path = Path(processed_dir)
-        self.preset_folder_path = Path(preset_dir)
-        self.output_file_extension = output_extension
+def find_compatible_files(folder) -> list[Path]:
+    return list(chain.from_iterable(folder.rglob(f"*.{ext}") for ext in video_extensions))
 
+
+class ConversionManager:
+    def __init__(self):
         self.stop_conversion = False
 
-        # States
+        # Status
         self.conversion_thread = None
         self.conversion_running = False
         self.current_file = None
@@ -56,44 +47,54 @@ class ConversionManager:
         self.source_files_successful = 0
         self.source_files_failed = 0
 
-    def find_input_videos(self) -> list[Path]:
-        return list(chain.from_iterable(self.input_folder_path.rglob(f"*.{ext}") for ext in video_extensions))
-
-    def convert_all_videos(self):
+    def convert_all_videos(
+            self,
+            input_dir: str | Path,
+            output_dir: str | Path,
+            processed_dir: str | Path,
+            preset_dir: str | Path,
+            output_extension: str | Path,
+    ):
         self.conversion_running = True
 
-        if not self.input_folder_path.exists() or not self.preset_folder_path.exists():
+        input_folder_path = Path(input_dir)
+        output_folder_path = Path(output_dir)
+        processed_folder_path = Path(processed_dir)
+        preset_folder_path = Path(preset_dir)
+        output_file_extension = output_extension
+
+        if not input_folder_path.exists() or not preset_folder_path.exists():
             print("Error: Input or preset directory does not exist.")
             return
 
-        source_files = self.find_input_videos()
+        source_files = find_compatible_files(folder=input_folder_path)
         self.source_files_total = len(source_files)
 
         print(f"Found {self.source_files_total} total files to process.")
 
         for source_path in source_files:
             # Get preset folder & check if it is an directory
-            source_preset_folder: Path = self.input_folder_path / source_path.relative_to(self.input_folder_path).parts[0]
-            source_preset_name = source_preset_folder.name
+            source_preset_folder: Path = input_folder_path / source_path.relative_to(input_folder_path).parts[0]
+            preset_name = source_preset_folder.name
             if not source_preset_folder.is_dir():
                 print(f"Error: Preset folder '{source_preset_folder}' is not a folder!")
                 return
 
             # Build the paths for the output file
-            source_file_relative_folder_path = Path(*source_path.relative_to(self.input_folder_path).parent.parts[1:])
-            output_file = self.output_folder_path / source_preset_name / source_file_relative_folder_path / f".tmp_{source_path.stem}.{self.output_file_extension}"
+            source_file_relative_folder_path = Path(*source_path.relative_to(input_folder_path).parent.parts[1:])
+            output_file = output_folder_path / preset_name / source_file_relative_folder_path / f".tmp_{source_path.stem}.{output_file_extension}"
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Find the preset file
-            preset_path = self.preset_folder_path / f"{source_preset_name}.json"
+            preset_path = preset_folder_path / f"{preset_name}.json"
 
             # Convert the video
             self.convert_video(
                 source_path=source_path,
                 destination_path=output_file,
-                processed_path=self.processed_folder_path / source_preset_name / source_file_relative_folder_path / source_path.name,
+                processed_path=processed_folder_path / preset_name / source_file_relative_folder_path / source_path.name,
                 preset_path=preset_path,
-                source_preset_name=source_preset_name
+                preset_name=preset_name
             )
 
             # Remove empty folders in "input/{profileName}" directory
@@ -112,13 +113,14 @@ class ConversionManager:
         self.source_files_failed = 0
         self.conversion_running = False
 
+
     def convert_video(
             self,
             source_path: Path,
             destination_path: Path,
             processed_path: Path,
             preset_path: Path,
-            source_preset_name: str,
+            preset_name: str,
     ):
         self.source_files_processed += 1
         self.current_file = source_path
@@ -128,7 +130,7 @@ class ConversionManager:
 
         # Check if preset file exists
         if not preset_path.exists():
-            print(f"Warning: No preset file found for {source_preset_name}, skipping.")
+            print(f"Warning: No preset file found for {preset_name}, skipping.")
             return
 
         # HandbrakeCLI command
@@ -137,7 +139,7 @@ class ConversionManager:
             "--input", str(source_path),
             "--output", str(destination_path),
             "--preset-import-file", str(preset_path),
-            "--preset", source_preset_name
+            "--preset", preset_name
         ]
 
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -159,6 +161,9 @@ class ConversionManager:
             print(f"Successfully converted {source_path}")
 
 
+################
+### REST API ###
+################
 @app.route('/api/start', methods=['POST'])
 def start():
     if conversion_manager.conversion_running:
@@ -168,13 +173,20 @@ def start():
 
     def run_conversion():
         print("Starting conversion process.")
-        conversion_manager.convert_all_videos()
+        conversion_manager.convert_all_videos(
+            input_dir=_BASE_DIR / "input",
+            output_dir=_BASE_DIR / "output",
+            processed_dir=_BASE_DIR / "processed",
+            preset_dir=_BASE_DIR / "presets",
+            output_extension=_OUTPUT_FILE_EXTENSION,
+        )
         print("Conversion process ended.")
 
     conversion_manager.conversion_thread = multiprocessing.Process(target=run_conversion)
     conversion_manager.conversion_thread.start()
 
     return "Starting conversion process."
+
 
 @app.route('/api/stop', methods=['POST'])
 def stop():
@@ -195,6 +207,7 @@ def stop():
     else:
         return "No conversion process to stop."
 
+
 @app.route('/api/status', methods=['GET'])
 def status():
     return jsonify({
@@ -207,9 +220,15 @@ def status():
         "source_files_failed": conversion_manager.source_files_failed,
     })
 
+
 def run_flask(host, port):
     serve(app, host=host, port=port)
 
+
+############
+### MAIN ###
+############
+conversion_manager = ConversionManager()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="Handbrake Helper")
 
@@ -220,18 +239,10 @@ if __name__ == "__main__":
     parser.add_argument('--host', default="0.0.0.0")
     args = parser.parse_args()
 
-    base_dir = Path(args.base_dir)
-    output_file_extension = args.output_extension
+    _BASE_DIR = Path(args.base_dir)
+    _OUTPUT_FILE_EXTENSION = args.output_extension
 
-    print(f"Base dir: {base_dir}")
-
-    conversion_manager = ConversionManager(
-        input_dir=base_dir / "input",
-        output_dir=base_dir / "output",
-        processed_dir=base_dir / "processed",
-        preset_dir=base_dir / "presets",
-        output_extension=output_file_extension,
-    )
+    print(f"Base dir: {_BASE_DIR}")
 
     flask_thread = threading.Thread(target=run_flask, args=(args.host, int(args.port)))
     flask_thread.start()
