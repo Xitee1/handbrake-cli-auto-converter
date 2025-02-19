@@ -169,4 +169,7 @@ Currently supported variables:
 | video.chapter_amount | The amount of chapters in the video |
 
 
-
+## Contributing
+All kind of contributions are very welcome in code and documentation!
+Please report bugs if you've found some in `Issues`.
+For feature requests please use `Discussions`.
