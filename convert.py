@@ -297,10 +297,10 @@ def run_flask(host, port):
 ############
 conversion_manager = ConversionManager()
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser(prog="Handbrake Helper")
 
+    parser.add_argument('--log-level', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        help="Set the logging level")
     parser.add_argument('--force-start', default=False, help="Start the conversion process immediately without waiting for API request.")
     parser.add_argument('--base-dir', default=Path(__file__).parent, help="Base directory for input, output, processed and preset folders.")
     parser.add_argument('--output-extension', default="mkv", help="Output file extension (e.g. mkv, mp4")
@@ -308,6 +308,7 @@ if __name__ == "__main__":
     parser.add_argument('--host', default="0.0.0.0")
     args = parser.parse_args()
 
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
     _BASE_DIR = Path(args.base_dir)
     _OUTPUT_FILE_EXTENSION = args.output_extension
 
