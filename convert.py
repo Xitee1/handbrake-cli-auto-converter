@@ -4,7 +4,6 @@ from itertools import chain
 from pathlib import Path
 import shutil
 from flask import Flask, request, jsonify
-import multiprocessing
 import threading
 from waitress import serve
 import argparse
@@ -270,7 +269,7 @@ def start():
         )
         logger.info("Conversion process ended.")
 
-    conversion_manager.conversion_thread = multiprocessing.Process(target=run_conversion)
+    conversion_manager.conversion_thread = threading.Thread(target=run_conversion)
     conversion_manager.conversion_thread.start()
 
     return "Starting conversion process."
