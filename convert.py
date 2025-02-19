@@ -8,6 +8,8 @@ import multiprocessing
 import threading
 from waitress import serve
 import argparse
+import re
+from jinja2 import Template
 
 app = Flask(__name__)
 
@@ -128,6 +130,22 @@ class ConversionManager:
         self.source_files_failed = 0
         self.conversion_running = False
 
+    def scan_video(self, source_path: Path):
+        # HandbrakeCLI command
+        command = [
+            "HandBrakeCLI",
+            "--input", str(source_path),
+            "--scan"
+        ]
+
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            print(f"Error scanning file {source_path}: {result.stderr.decode()}")
+            return None
+        else:
+            print(f"Successfully scanned {source_path}")
+        return result.stderr.decode()
+
 
     def convert_video(
             self,
@@ -137,7 +155,21 @@ class ConversionManager:
             preset_path: Path,
             preset_name: str,
             extra_options: str = None,
+            pre_scan: bool = True
     ):
+        """
+        Convert a video file using HandbrakeCLI.
+
+        :param source_path: The path to the source file
+        :param destination_path: The path to save the converted file to
+        :param processed_path: The path to move the source file to after conversion
+        :param preset_path: The path to the preset file
+        :param preset_name: The name of the preset to use
+        :param extra_options: String of extra options to be appended to the HandBrakeCLI command
+        :param pre_scan: Required if using jinja2 templating in extra options
+        :return:
+        """
+
         self.source_files_processed += 1
         self.current_file = source_path
 
@@ -148,6 +180,19 @@ class ConversionManager:
         if not preset_path.exists():
             print(f"Warning: No preset file found for {preset_name}, skipping.")
             return
+
+        if pre_scan:
+            scan_result = self.scan_video(source_path)
+            if scan_result is None:
+                return
+
+            chapter_amount = len(re.findall(r"\+ (\d+): duration", scan_result))
+
+            extra_options = Template(extra_options).render(
+                video={
+                    "chapter_amount": chapter_amount
+                }
+            )
 
         # HandbrakeCLI command
         command = [
