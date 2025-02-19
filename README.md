@@ -142,7 +142,7 @@ After conversion:
     └── convert.py
 ```
 
-## Advanced Handbrake Options
+## Advanced Options
 You can add custom HandBrakeCLI options to the command by creating specifically named files in the input folder.
 There are 2 options:
 1. Use a file called `_.hbconf` that applies to all files at the same directory (in the future nested directories might be supported too)
@@ -155,3 +155,18 @@ _NOTE: Currently the `_.hbconf` file does not work for nested directories! It mu
 
 See the handbrake documentation for all available options:
 https://handbrake.fr/docs/en/latest/cli/command-line-reference.html
+
+### Templating
+It's possible to use jinja2 templating in the `hbconf` file.
+For example if you always want to remove the last chapter: `--chapters 1-{{ video.chapter_amount - 1 }}`
+
+_NOTE: Files with multiple video tracks might cause some issues currently._
+
+Currently supported variables:
+
+| Variable             | Description                         |
+|----------------------|-------------------------------------|
+| video.chapter_amount | The amount of chapters in the video |
+
+
+
