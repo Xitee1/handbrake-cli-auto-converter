@@ -253,6 +253,10 @@ class ConversionManager:
 ################
 @app.route('/api/start', methods=['POST'])
 def start():
+    if conversion_manager.stop_conversion:
+        conversion_manager.stop_conversion = False
+        return "Canceled scheduled stop."
+
     if conversion_manager.conversion_running:
         return "Conversion process is already running."
 
