@@ -132,13 +132,30 @@ class ConversionManager:
         self.source_files_failed = 0
         self.conversion_running = False
 
-    def scan_video(self, source_path: Path):
+
+    def scan_video(self, source_path: Path, preset_path: Path = None, preset_name: str = None) -> str | None:
+        """
+        Scan a video file using HandbrakeCLI and returns the output.
+
+        Parameters preset_path and preset_name must be used together!
+
+        :param source_path: Path to the source file
+        :param preset_path: Path to the preset file (optional)
+        :param preset_name: Preset name (optional)
+        :return: Output of HandBrakeCLI
+        """
         # HandbrakeCLI command
         command = [
             "HandBrakeCLI",
             "--input", str(source_path),
             "--scan"
         ]
+
+        if preset_path and preset_name:
+            command.extend([
+                "--preset-import-file", str(preset_path),
+                "--preset", preset_name,
+            ])
 
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
@@ -184,12 +201,16 @@ class ConversionManager:
             return
 
         if pre_scan:
-            scan_result = self.scan_video(source_path)
+            scan_result = self.scan_video(
+                source_path=source_path,
+                preset_path=preset_path,
+                preset_name=preset_name,
+            )
             if scan_result is None:
                 logger.warning(f"Warning: Could not scan file {source_path}, skipping.")
                 return
 
-            chapter_amount = len(re.findall(r"\+ (\d+): duration", scan_result))
+            chapter_amount = len(re.findall(r"\+ (\d+): duration ", scan_result))
 
             extra_options = Template(extra_options).render(
                 video={
@@ -203,7 +224,7 @@ class ConversionManager:
             "--input", str(source_path),
             "--output", str(destination_path),
             "--preset-import-file", str(preset_path),
-            "--preset", preset_name
+            "--preset", preset_name,
         ]
 
         if extra_options:
