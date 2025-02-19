@@ -158,7 +158,7 @@ https://handbrake.fr/docs/en/latest/cli/command-line-reference.html
 
 ### Templating
 It's possible to use jinja2 templating in the `hbconf` file.
-For example if you always want to remove the last chapter: `--chapters 1-{{ video.chapter_amount - 1 }}`
+For example, if you always want to remove the last chapter: `--chapters 1-{{ video.chapter_amount - 1 }}`
 
 _NOTE: Files with multiple video tracks might cause some issues currently._
 

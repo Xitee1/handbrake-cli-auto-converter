@@ -10,7 +10,9 @@ from waitress import serve
 import argparse
 import re
 from jinja2 import Template
+import logging
 
+logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 video_extensions = ["mp4", "mkv", "avi", "mov", "webm", "flv", "mpeg", "mpg", "wmv"]
@@ -73,20 +75,20 @@ class ConversionManager:
         output_file_extension = output_extension
 
         if not input_folder_path.exists() or not preset_folder_path.exists():
-            print("Error: Input or preset directory does not exist.")
+            logger.error("Error: Input or preset directory does not exist.")
             return
 
         source_files = find_compatible_files(folder=input_folder_path)
         self.source_files_total = len(source_files)
 
-        print(f"Found {self.source_files_total} total files to process.")
+        logger.info(f"Found {self.source_files_total} total files to process.")
 
         for source_path in source_files:
             # Get preset folder & check if it is an directory
             source_preset_folder: Path = input_folder_path / source_path.relative_to(input_folder_path).parts[0]
             preset_name = source_preset_folder.name
             if not source_preset_folder.is_dir():
-                print(f"Error: Preset folder '{source_preset_folder}' is not a folder!")
+                logger.error(f"Error: Preset folder '{source_preset_folder}' is not a folder!")
                 return
 
             # Build the paths for the output file
@@ -119,7 +121,7 @@ class ConversionManager:
 
             # Stop conversion if requested
             if self.stop_conversion:
-                print("Conversion process stopped. Conversions left: ", self.source_files_total - self.source_files_successful)
+                logger.info("Conversion process stopped. Conversions left: ", self.source_files_total - self.source_files_successful)
                 break
 
         self.current_file = None
@@ -140,10 +142,10 @@ class ConversionManager:
 
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
-            print(f"Error scanning file {source_path}: {result.stderr.decode()}")
+            logger.error(f"Unable to scan file {source_path}: {result.stderr.decode()}")
             return None
         else:
-            print(f"Successfully scanned {source_path}")
+            logger.info(f"Successfully scanned {source_path}")
         return result.stderr.decode()
 
 
@@ -173,17 +175,18 @@ class ConversionManager:
         self.source_files_processed += 1
         self.current_file = source_path
 
-        # Print status message
-        print(f"Processing [{self.source_files_processed}/{self.source_files_total}]: {source_path} -> {destination_path}")
+        # Show progress message
+        logger.info(f"Processing [{self.source_files_processed}/{self.source_files_total}]: {source_path} -> {destination_path}")
 
         # Check if preset file exists
         if not preset_path.exists():
-            print(f"Warning: No preset file found for {preset_name}, skipping.")
+            logger.warning(f"Warning: No preset file found for {preset_name}, skipping.")
             return
 
         if pre_scan:
             scan_result = self.scan_video(source_path)
             if scan_result is None:
+                logger.warning(f"Warning: Could not scan file {source_path}, skipping.")
                 return
 
             chapter_amount = len(re.findall(r"\+ (\d+): duration", scan_result))
@@ -209,7 +212,7 @@ class ConversionManager:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
             self.source_files_failed += 1
-            print(f"Error processing file {source_path}: {result.stderr.decode()}")
+            logger.error(f"Error processing file {source_path}: {result.stderr.decode()}")
         else:
             # Move source file to "processed" directory
             move_file(
@@ -222,7 +225,7 @@ class ConversionManager:
             destination_path.rename(destination_path.with_name(destination_path.name.replace(".tmp_", "")))
 
             self.source_files_successful += 1
-            print(f"Successfully converted {source_path}")
+            logger.info(f"Successfully converted {source_path}")
 
 
 ################
@@ -236,7 +239,7 @@ def start():
     conversion_manager.stop_conversion = False
 
     def run_conversion():
-        print("Starting conversion process.")
+        logger.info("Starting conversion process.")
         conversion_manager.convert_all_videos(
             input_dir=_BASE_DIR / "input",
             output_dir=_BASE_DIR / "output",
@@ -244,7 +247,7 @@ def start():
             preset_dir=_BASE_DIR / "presets",
             output_extension=_OUTPUT_FILE_EXTENSION,
         )
-        print("Conversion process ended.")
+        logger.info("Conversion process ended.")
 
     conversion_manager.conversion_thread = multiprocessing.Process(target=run_conversion)
     conversion_manager.conversion_thread.start()
@@ -261,12 +264,12 @@ def stop():
             if conversion_manager.conversion_thread is not None:
                 conversion_manager.conversion_thread.terminate()
                 conversion_manager.conversion_thread = None
-                print("Conversion force-stopped.")
+                logger.warning("Conversion force-stopped.")
                 return "Conversion force-stopped."
             else:
                 return "No conversion process to stop."
         else:
-            print("Stopping conversion process after finishing current task.")
+            logger.info("Stopping conversion process after finishing current task.")
             return "Stopping conversion process after finishing current task."
     else:
         return "No conversion process to stop."
@@ -294,6 +297,8 @@ def run_flask(host, port):
 ############
 conversion_manager = ConversionManager()
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser(prog="Handbrake Helper")
 
     parser.add_argument('--force-start', default=False, help="Start the conversion process immediately without waiting for API request.")
@@ -306,10 +311,10 @@ if __name__ == "__main__":
     _BASE_DIR = Path(args.base_dir)
     _OUTPUT_FILE_EXTENSION = args.output_extension
 
-    print(f"Base dir: {_BASE_DIR}")
+    logger.info(f"Base dir: {_BASE_DIR}")
 
     flask_thread = threading.Thread(target=run_flask, args=(args.host, int(args.port)))
     flask_thread.start()
 
-    print(f"Handbrake Helper is ready. Call POST http://127.0.0.1:{args.port}/api/start to start the conversion process.")
+    logger.info(f"Handbrake Helper is ready. Call POST http://127.0.0.1:{args.port}/api/start to start the conversion process.")
 
