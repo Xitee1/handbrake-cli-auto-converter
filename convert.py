@@ -34,6 +34,13 @@ def find_compatible_files(folder) -> list[Path]:
     return list(chain.from_iterable(folder.rglob(f"*.{ext}") for ext in video_extensions))
 
 
+def read_text_file(file_path: Path) -> str | None:
+    if file_path.exists():
+        with open(file_path, 'r') as f:
+            return f.read().strip()
+    return None
+
+
 class ConversionManager:
     def __init__(self):
         self.stop_conversion = False
@@ -88,13 +95,21 @@ class ConversionManager:
             # Find the preset file
             preset_path = preset_folder_path / f"{preset_name}.json"
 
+            # Find extra config files
+            individual_config = read_text_file(source_path.with_suffix('.hbconf'))
+            global_config = read_text_file(source_path.parent / '_.hbconf')
+
+            # Prefer individual config over global
+            extra_options = individual_config if individual_config is not None else global_config
+
             # Convert the video
             self.convert_video(
                 source_path=source_path,
                 destination_path=output_file,
                 processed_path=processed_folder_path / preset_name / source_file_relative_folder_path / source_path.name,
                 preset_path=preset_path,
-                preset_name=preset_name
+                preset_name=preset_name,
+                extra_options=extra_options,
             )
 
             # Remove empty folders in "input/{profileName}" directory
@@ -121,6 +136,7 @@ class ConversionManager:
             processed_path: Path,
             preset_path: Path,
             preset_name: str,
+            extra_options: str = None,
     ):
         self.source_files_processed += 1
         self.current_file = source_path
@@ -141,6 +157,9 @@ class ConversionManager:
             "--preset-import-file", str(preset_path),
             "--preset", preset_name
         ]
+
+        if extra_options:
+            command.extend(extra_options.split())
 
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:

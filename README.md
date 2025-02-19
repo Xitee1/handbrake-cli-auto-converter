@@ -23,7 +23,6 @@ It's controlled through a very simple REST API.
 
 ## TODO
 - Add API status endpoint
-- Use less hardcoded values
 - Docker image + Proxmox LXC template
 - Add authentication if this project will ever gets attention and there are users that need it
 
@@ -142,3 +141,17 @@ After conversion:
     │   └── preset1.json
     └── convert.py
 ```
+
+## Advanced Handbrake Options
+You can add custom HandBrakeCLI options to the command by creating specifically named files in the input folder.
+There are 2 options:
+1. Use a file called `_.hbconf` that applies to all files at the same directory (in the future nested directories might be supported too)
+2. Use a file called exactly like a specific video file with the `.hbconf` extension to only apply the options for a specific file
+
+In this file, you simply write the additional options as plain text.
+Example: `--chapters 1-5`
+
+_NOTE: Currently the `_.hbconf` file does not work for nested directories! It must be on the same level as your video files._
+
+See the handbrake documentation for all available options:
+https://handbrake.fr/docs/en/latest/cli/command-line-reference.html
