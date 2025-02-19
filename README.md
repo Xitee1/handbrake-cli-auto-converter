@@ -40,6 +40,8 @@ For example, you can call this API from Home Assistant to start the conversion w
 If you want to fully shut down the PC when no conversion is running, you can use Wake on LAN and configure the script to run on startup (using a cronjob or [run as systemd service](#run-as-systemd-service)).
 To shut down the PC, you can use the status endpoint to check if a conversion is currently running.
 
+Example to [integrate it into Home Assistant](HOME_ASSISTANT.md)
+
 ## Installation
 - Download the `convert.py` file from [Releases](https://github.com/Xitee1/handbrake-cli-auto-converter/releases)
 - Make sure these packages are installed on your system: `handbrake-cli python3-flask python3-waitress`
