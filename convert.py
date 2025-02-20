@@ -120,7 +120,7 @@ class ConversionManager:
 
             # Stop conversion if requested
             if self.stop_conversion:
-                logger.info("Conversion process stopped. Conversions left: ", self.source_files_total - self.source_files_successful)
+                logger.info(f"Conversion process stopped. Conversions left: {self.source_files_total - self.source_files_successful}")
                 break
 
         self.current_file = None
