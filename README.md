@@ -22,6 +22,7 @@ It's controlled through a very simple REST API.
   - If interrupted, it leaves behind an unfinished file with the prefix `.tmp_` in the output folder. This file can't be resumed but will be restarted the next time.
 
 ## TODO
+- File locking / prevent multiple processes working on the same file
 - Make force stop work (need to somehow kill the handbrake command execution for that)
 - Docker image + Proxmox LXC template
 - Add authentication if this project will ever gets attention and there are users that need it
