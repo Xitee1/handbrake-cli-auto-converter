@@ -34,7 +34,7 @@ def move_file(source, destination, make_missing_dirs=False):
 
 
 def find_compatible_files(folder) -> list[Path]:
-    return list(chain.from_iterable(folder.rglob(f"*.{ext}") for ext in video_extensions))
+    return sorted(list(chain.from_iterable(folder.rglob(f"*.{ext}") for ext in video_extensions)))
 
 
 def read_text_file(file_path: Path) -> str | None:
