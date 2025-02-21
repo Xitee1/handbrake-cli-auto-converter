@@ -199,7 +199,7 @@ class ConversionManager:
             logger.warning(f"Warning: No preset file found for {preset_name}, skipping.")
             return
 
-        if pre_scan:
+        if pre_scan and extra_options:
             scan_result = self.scan_video(
                 source_path=source_path,
                 preset_path=preset_path,
