@@ -265,10 +265,10 @@ def start():
     def run_conversion():
         logger.info("Starting conversion process.")
         conversion_manager.convert_all_videos(
-            input_dir=_BASE_DIR / "input",
-            output_dir=_BASE_DIR / "output",
-            processed_dir=_BASE_DIR / "processed",
-            preset_dir=_BASE_DIR / "presets",
+            input_dir=_DIR_INPUT,
+            output_dir=_DIR_OUTPUT,
+            processed_dir=_DIR_PROCESSED,
+            preset_dir=_DIR_PRESETS,
             output_extension=_OUTPUT_FILE_EXTENSION,
         )
         logger.info("Conversion process ended.")
@@ -321,22 +321,47 @@ def run_flask(host, port):
 ############
 conversion_manager = ConversionManager()
 if __name__ == "__main__":
+    base_dir = Path(__file__).parent
+
     parser = argparse.ArgumentParser(prog="Handbrake Helper")
 
     parser.add_argument('--log-level', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help="Set the logging level")
     parser.add_argument('--force-start', default=False, help="Start the conversion process immediately without waiting for API request.")
-    parser.add_argument('--base-dir', default=Path(__file__).parent, help="Base directory for input, output, processed and preset folders.")
+
+    parser.add_argument(
+        '--input-dir',
+        default=base_dir / "input",
+        help="Input folder of files to convert"
+    )
+    parser.add_argument(
+        '--output-dir',
+        default=base_dir / "output",
+        help="Folder where all converted files are saved to"
+    )
+    parser.add_argument(
+        '--processed-dir',
+        default=base_dir / "processed",
+        help="Folder where all original processed files are moved to"
+    )
+    parser.add_argument(
+        '--presets-dir',
+        default=base_dir / "presets",
+        help="Folder with all the presets"
+    )
+
     parser.add_argument('--output-extension', default="mkv", help="Output file extension (e.g. mkv, mp4")
     parser.add_argument('--port', default=5000)
     parser.add_argument('--host', default="0.0.0.0")
     args = parser.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log_level.upper()))
-    _BASE_DIR = Path(args.base_dir)
-    _OUTPUT_FILE_EXTENSION = args.output_extension
 
-    logger.info(f"Base dir: {_BASE_DIR}")
+    _DIR_INPUT = args.input_dir
+    _DIR_OUTPUT = args.output_dir
+    _DIR_PROCESSED = args.processed_dir
+    _DIR_PRESETS = args.presets_dir
+    _OUTPUT_FILE_EXTENSION = args.output_extension
 
     flask_thread = threading.Thread(target=run_flask, args=(args.host, int(args.port)))
     flask_thread.start()
