@@ -229,20 +229,23 @@ class ConversionManager:
         if extra_options:
             command.extend(extra_options.split())
 
+        if _GLOBAL_EXTRA_OPTIONS:
+            command.extend(_GLOBAL_EXTRA_OPTIONS.split())
+
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
             self.source_files_failed += 1
             logger.error(f"Error processing file {source_path}: {result.stderr.decode()}")
         else:
+            # Rename output file to remove ".tmp_" prefix
+            destination_path.rename(destination_path.with_name(destination_path.name.replace(".tmp_", "")))
+
             # Move source file to "processed" directory
             move_file(
                 source=source_path,
                 destination=processed_path,
                 make_missing_dirs=True,
             )
-
-            # Rename output file to remove ".tmp_" prefix
-            destination_path.rename(destination_path.with_name(destination_path.name.replace(".tmp_", "")))
 
             self.source_files_successful += 1
             logger.info(f"Successfully converted {source_path}")
@@ -349,6 +352,7 @@ if __name__ == "__main__":
         default=base_dir / "presets",
         help="Folder with all the presets"
     )
+    parser.add_argument('--extra-options', default=None, help="Global extra options for HandBrakeCLI")
 
     parser.add_argument('--output-extension', default="mkv", help="Output file extension (e.g. mkv, mp4")
     parser.add_argument('--port', default=5000)
@@ -362,6 +366,7 @@ if __name__ == "__main__":
     _DIR_PROCESSED = args.processed_dir
     _DIR_PRESETS = args.presets_dir
     _OUTPUT_FILE_EXTENSION = args.output_extension
+    _GLOBAL_EXTRA_OPTIONS = args.extra_options
 
     flask_thread = threading.Thread(target=run_flask, args=(args.host, int(args.port)))
     flask_thread.start()
