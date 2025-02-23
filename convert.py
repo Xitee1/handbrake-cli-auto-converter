@@ -89,8 +89,8 @@ class ConversionManager:
             source_preset_folder: Path = input_folder_path / source_path.relative_to(input_folder_path).parts[0]
             preset_name = source_preset_folder.name
             if not source_preset_folder.is_dir():
-                logger.error(f"Error: Preset folder '{source_preset_folder}' is not a folder!")
-                return
+                logger.error(f"Error: Preset folder '{source_preset_folder}' is not a folder! Skipping.")
+                continue
 
             # Build the paths for the output file
             source_file_relative_folder_path = Path(*source_path.relative_to(input_folder_path).parent.parts[1:])
