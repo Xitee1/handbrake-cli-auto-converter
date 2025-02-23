@@ -82,8 +82,10 @@ class ConversionManager:
 
         logger.info(f"Found {self.source_files_total} total files to process.")
 
-        for source_path in source_files:
-            # Get preset folder & check if it is an directory
+        while len(source_files) >= 1:
+            source_path = source_files[0]
+
+            # Get preset folder & check if it is a directory
             source_preset_folder: Path = input_folder_path / source_path.relative_to(input_folder_path).parts[0]
             preset_name = source_preset_folder.name
             if not source_preset_folder.is_dir():
@@ -122,6 +124,10 @@ class ConversionManager:
             if self.stop_conversion:
                 logger.info(f"Conversion process stopped. Conversions left: {self.source_files_total - self.source_files_successful}")
                 break
+
+            # Re-scan source directory
+            source_files = find_compatible_files(folder=input_folder_path)
+            self.source_files_total = len(source_files)
 
         self.current_file = None
         #self.source_files_total -= self.source_files_successful
