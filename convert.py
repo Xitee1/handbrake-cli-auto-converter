@@ -129,6 +129,7 @@ class ConversionManager:
             source_files = find_compatible_files(folder=input_folder_path)
             self.source_files_total = len(source_files)
 
+        stop_conversion = False
         self.current_file = None
         #self.source_files_total -= self.source_files_successful
         self.source_files_total = 0
@@ -268,8 +269,6 @@ def start():
 
     if conversion_manager.conversion_running:
         return "Conversion process is already running."
-
-    conversion_manager.stop_conversion = False
 
     def run_conversion():
         logger.info("Starting conversion process.")
